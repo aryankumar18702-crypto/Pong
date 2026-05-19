@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pong Game</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #gameMenu {
+      position: absolute;
+      left: 0; right: 0; top: 0; bottom: 0;
+      margin: auto;
+      width: 350px;
+      height: 340px;
+      background: rgba(50,50,50,0.88);
+      border-radius: 18px;
+      text-align: center;
+      color: #fff;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 0 30px #0f0;
+    }
+    #menuTitle {
+      font-size: 2em;
+      margin-bottom: 24px;
+      font-weight: bold;
+      color: #0f0;
+      letter-spacing: 2px;
+    }
+    label {
+      font-size: 1.15em;
+      margin-bottom: 12px;
+      font-weight: bold;
+      display:block;
+    }
+    select {
+      padding: 10px;
+      font-size: 1em;
+      margin-bottom: 24px;
+      margin-top: 4px;
+      border-radius: 4px;
+      border: none;
+      width: 95%;
+    }
+    #startBtn, #restartBtn {
+      background: #0f0;
+      color: #222;
+      font-size: 1.2em;
+      padding: 14px 34px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 22px;
+      transition: background 0.15s;
+    }
+    #startBtn:hover, #restartBtn:hover { background:#1c6; }
+    #winner {
+      font-size: 2em;
+      font-weight: bold;
+      color: #ff0;
+      margin-bottom: 24px;
+    }
+    #gameHeading {
+      text-align: center;
+      font-size: 3em;
+      font-family: 'Arial Black', Arial, sans-serif;
+      color: #0f0;
+      letter-spacing: 4px;
+      margin-top: 20px;
+      margin-bottom: 0;
+      text-shadow: 1px 1px 5px #333, 0px 0px 25px #0f0;
+      user-select: none;
+    }
+    @media(max-width:850px){
+      #gameHeading { font-size:2em;}
+      #gameMenu {width:95%;}
+    }
+  </style>
+</head>
+<body>
+  <h1 id="gameHeading">PONG GAME</h1>
+  <div id="gameMenu">
+    <div id="menuTitle">Setup Game</div>
+    <form id="gameForm">
+      <label for="side">Choose Side:</label>
+      <select id="side">
+        <option value="left">Left (Green)</option>
+        <option value="right">Right (Red)</option>
+      </select>
+      <label for="device">Choose Device:</label>
+      <select id="device">
+        <option value="laptop">Laptop/Desktop</option>
+        <option value="phone">Phone/Touch</option>
+      </select>
+      <label for="winScore">Winning Score:</label>
+      <select id="winScore">
+        <option value="3">First to 3</option>
+        <option value="5" selected>First to 5</option>
+        <option value="10">First to 10</option>
+      </select>
+      <button id="startBtn" type="submit">Start Game</button>
+    </form>
+  </div>
+  <canvas id="pong" width="800" height="500" style="display:none"></canvas>
+  <div id="winnerScreen" style="display:none; text-align:center; margin-top:40px;">
+    <div id="winner"></div>
+    <button id="restartBtn">Restart</button>
+  </div>
+  <script src="pong.js"></script>
+</body>
+</html>
