@@ -94,13 +94,11 @@ function movePlayer() {
   // On mobile, handled by touch events
 }
 function moveComputer() {
-  if (gameOver) return;
-  let compObj = (playerSide === "left") ? computer : player;
-  // Intelligent AI: move towards ball with some "lag"
-  let target = ball.y - (compObj.height/2);
-  if (compObj.y < target) compObj.y += compObj.dy;
-  else if (compObj.y > target) compObj.y -= compObj.dy;
-  clampPaddle(compObj);
+  let computerPaddle = (playerSide === "left") ? computer : player;
+  let target = ball.y - (computerPaddle.height/2);
+  if (computerPaddle.y < target) computerPaddle.y += computerPaddle.dy;
+  else if (computerPaddle.y > target) computerPaddle.y -= computerPaddle.dy;
+  clampPaddle(computerPaddle);
 }
 
 // -- Ball Logic & Collision
