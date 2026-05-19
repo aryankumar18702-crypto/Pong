@@ -22,19 +22,32 @@ let requestId;
 const paddleWidth = 15, paddleHeight = 100;
 const ballRadius = 10;
 let player, computer, ball;
+let humanPaddle, computerPaddle;
 
 function setupGameObj() {
-  player = { x: 10, y: canvas.height/2 - paddleHeight/2, width: paddleWidth, height: paddleHeight, dy: 0, score: 0, color: "#0f0" };
-  computer = { x: canvas.width - paddleWidth - 10, y: canvas.height/2 - paddleHeight/2, width: paddleWidth, height: paddleHeight, dy: 3, score: 0, color: "#f00"};
+  // Left paddle: always x=10; right paddle: always x=canvas.width - paddleWidth -10
+  player = { x: 10, y: canvas.height/2 - paddleHeight/2, width: paddleWidth, height: paddleHeight, dy: 0, score: 0, color: "#0f0", baseX: 10 };
+  computer = { x: canvas.width - paddleWidth - 10, y: canvas.height/2 - paddleHeight/2, width: paddleWidth, height: paddleHeight, dy: 3, score: 0, color: "#f00", baseX: canvas.width - paddleWidth - 10 };
   ball = { x: canvas.width/2, y: canvas.height/2, radius: ballRadius, speed: 5, dx: 5, dy: 3 };
-  if (playerSide === "right") {
-    // Swap sides
-    [player.x, computer.x] = [computer.x, player.x];
-    [player.color, computer.color] = [computer.color, player.color];
+  
+  // Set color and assign paddles based on playerSide
+  if (playerSide === "left") {
+    player.x = 10;
+    player.color = "#0f0";
+    computer.x = canvas.width - paddleWidth - 10;
+    computer.color = "#f00";
+    humanPaddle = player;
+    computerPaddle = computer;
+  } else {
+    computer.x = 10;
+    computer.color = "#0f0";
+    player.x = canvas.width - paddleWidth - 10;
+    player.color = "#f00";
+    humanPaddle = player;
+    computerPaddle = computer;
   }
 }
 
-// --- Drawing Utility Functions
 function drawRect(x, y, w, h, color = '#fff') {
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
@@ -57,59 +70,55 @@ function drawNet() {
   }
 }
 function render() {
-  // Clear
   drawRect(0, 0, canvas.width, canvas.height, "#000");
-  // Net
   drawNet();
-  // Scores
+  // Scores based on paddle location
   if (!gameOver) {
-    if (playerSide === "left") {
-      drawText(player.score, canvas.width/4, 50, player.color);
-      drawText(computer.score, 3*canvas.width/4, 50, computer.color);
+    // Left paddle score left, right paddle score right
+    if (humanPaddle.x < computerPaddle.x) {
+      drawText(humanPaddle.score, canvas.width/4, 50, humanPaddle.color);
+      drawText(computerPaddle.score, 3*canvas.width/4, 50, computerPaddle.color);
     } else {
-      drawText(computer.score, canvas.width/4, 50, computer.color);
-      drawText(player.score, 3*canvas.width/4, 50, player.color);
+      drawText(computerPaddle.score, canvas.width/4, 50, computerPaddle.color);
+      drawText(humanPaddle.score, 3*canvas.width/4, 50, humanPaddle.color);
     }
   }
-  
-  // Paddles & Ball
   drawRect(player.x, player.y, player.width, player.height, player.color);
   drawRect(computer.x, computer.y, computer.width, computer.height, computer.color);
   drawCircle(ball.x, ball.y, ball.radius, "#fff");
 }
 
-// -- Paddle Controls
+// Paddle Clamping
 function clampPaddle(p) {
   if (p.y < 0) p.y = 0;
   if (p.y + p.height > canvas.height) p.y = canvas.height - p.height;
 }
-function movePlayer() {
+// Player input movement (mouse/touch/keys only move humanPaddle)
+function moveHumanPaddle() {
   if (gameOver) return;
-  // Laptop/Desktop Controls
   if (!isMobile) {
-    if(upPressed) player.y -= 7;
-    if(downPressed) player.y += 7;
-    clampPaddle(player);
+    if (upPressed)    { humanPaddle.y -= 7; clampPaddle(humanPaddle); }
+    if (downPressed)  { humanPaddle.y += 7; clampPaddle(humanPaddle); }
   }
-  // On mobile, handled by touch events
+  // Mobile input: handled by touch events.
 }
+// Computer paddle movement
 function moveComputer() {
-  let computerPaddle = (playerSide === "left") ? computer : player;
+  if (gameOver) return;
   let target = ball.y - (computerPaddle.height/2);
   if (computerPaddle.y < target) computerPaddle.y += computerPaddle.dy;
   else if (computerPaddle.y > target) computerPaddle.y -= computerPaddle.dy;
   clampPaddle(computerPaddle);
 }
 
-// -- Ball Logic & Collision
 function resetBall() {
   ball.x = canvas.width/2;
   ball.y = canvas.height/2;
   ball.dy = (Math.random() * 2 + 3) * (Math.random() > 0.5 ? 1 : -1);
-  ball.dx = Math.sign(ball.dx || 1) * ball.speed;
-  ball.dx *= -1; // Change direction
+  ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
   ball.speed = 5;
 }
+
 function checkCollision(ball, paddle) {
   return (
     ball.x - ball.radius < paddle.x + paddle.width &&
@@ -118,6 +127,7 @@ function checkCollision(ball, paddle) {
     ball.y - ball.radius < paddle.y + paddle.height
   );
 }
+
 function updateBall() {
   if (gameOver) return;
   ball.x += ball.dx;
@@ -126,34 +136,36 @@ function updateBall() {
   if(ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
     ball.dy *= -1;
   }
-  // Scoring (left or right)
-  if (playerSide === "left") {
-    // Left out = computer scores, right out = player scores
-    if(ball.x - ball.radius < 0) {
-      computer.score++;
-      resetBall(); checkWin();
+  // Scoring (based on paddle X position)
+  // Left side
+  if(ball.x - ball.radius < 0) {
+    if (playerSide === "left") {
+      computerPaddle.score++; // right scores
+    } else {
+      humanPaddle.score++; // right (you) scores
     }
-    if(ball.x + ball.radius > canvas.width) {
-      player.score++;
-      resetBall(); checkWin();
+    resetBall(); checkWin();
+  }
+  // Right side
+  if(ball.x + ball.radius > canvas.width) {
+    if (playerSide === "right") {
+      computerPaddle.score++; // left scores
+    } else {
+      humanPaddle.score++; // right (you) scores
     }
-  } else {
-    if(ball.x + ball.radius > canvas.width) {
-      computer.score++;
-      resetBall(); checkWin();
-    }
-    if(ball.x - ball.radius < 0) {
-      player.score++;
-      resetBall(); checkWin();
-    }
+    resetBall(); checkWin();
   }
   // Paddle collisions
-  let paddle1 = (playerSide==="left") ? player : computer;
-  let paddle2 = (playerSide==="left") ? computer : player;
-  let mainPaddle = (ball.x < canvas.width/2) ? paddle1 : paddle2;
-  if (checkCollision(ball, mainPaddle)) {
-    let collidePoint = ball.y - (mainPaddle.y + mainPaddle.height/2);
-    collidePoint = collidePoint / (mainPaddle.height/2);
+  let targetPaddle;
+  // Left half
+  if (ball.x < canvas.width / 2) {
+    targetPaddle = (humanPaddle.x < canvas.width / 2) ? humanPaddle : computerPaddle;
+  } else {
+    targetPaddle = (humanPaddle.x > canvas.width / 2) ? humanPaddle : computerPaddle;
+  }
+  if (checkCollision(ball, targetPaddle)) {
+    let collidePoint = ball.y - (targetPaddle.y + targetPaddle.height/2);
+    collidePoint = collidePoint / (targetPaddle.height/2);
     let angle = collidePoint * Math.PI/3;
     let direction = (ball.x < canvas.width/2) ? 1 : -1;
     ball.dx = direction * ball.speed * Math.cos(angle);
@@ -161,10 +173,12 @@ function updateBall() {
     if(ball.speed < 12) ball.speed += 0.3;
   }
 }
+
 function checkWin() {
-  if(player.score >= winScore) showGameOver("You Win! 🏆");
-  if(computer.score >= winScore) showGameOver("Computer Wins! 💻");
+  if(humanPaddle.score >= winScore) showGameOver("You Win! 🏆");
+  if(computerPaddle.score >= winScore) showGameOver("Computer Wins! 💻");
 }
+
 function showGameOver(winner) {
   gameOver = true;
   winnerMsg.innerText = winner;
@@ -173,8 +187,15 @@ function showGameOver(winner) {
   if(requestId) cancelAnimationFrame(requestId);
 }
 
-// -- Touch/Mouse Controls
+// Input Controls
 function enablePaddleControls() {
+  // Remove all old listeners first
+  document.onkeydown = null; document.onkeyup = null;
+  canvas.onmousemove = null;
+  canvas.ontouchstart = null;
+  canvas.ontouchmove = null;
+  canvas.ontouchend = null;
+
   // Laptop/Desktop: Arrow keys & Mouse
   if(!isMobile) {
     // Keyboard
@@ -186,55 +207,49 @@ function enablePaddleControls() {
       if (e.key === "ArrowUp") upPressed = false;
       else if (e.key === "ArrowDown") downPressed = false;
     };
-    // Mouse
-    canvas.addEventListener('mousemove', function(evt) {
-      const rect = canvas.getBoundingClientRect();
-      const mouseY = evt.clientY - rect.top;
-      if (playerSide === "left") player.y = mouseY - player.height / 2;
-      else if (playerSide === "right") player.y = mouseY - player.height / 2;
-      clampPaddle(player);
-    });
+    // Mouse (moves human paddle)
+    canvas.onmousemove = function(evt) {
+      let rect = canvas.getBoundingClientRect();
+      let mouseY = evt.clientY - rect.top;
+      humanPaddle.y = mouseY - humanPaddle.height / 2;
+      clampPaddle(humanPaddle);
+    };
   }
   // Mobile (Touch)
   if (isMobile) {
-    canvas.addEventListener('touchstart', function(evt) {
+    canvas.ontouchstart = function(evt) {
       let rect = canvas.getBoundingClientRect();
       let touchY = evt.touches[0].clientY - rect.top;
-      touchOffset = touchY - player.y;
+      touchOffset = touchY - humanPaddle.y;
       evt.preventDefault();
-    });
-    canvas.addEventListener('touchmove', function(evt) {
+      // Also allow tap jump to position
+      humanPaddle.y = touchY - humanPaddle.height/2;
+      clampPaddle(humanPaddle);
+    };
+    canvas.ontouchmove = function(evt) {
       if (touchOffset == null) return;
       let rect = canvas.getBoundingClientRect();
       let touchY = evt.touches[0].clientY - rect.top;
-      player.y = touchY - touchOffset;
-      clampPaddle(player);
+      humanPaddle.y = touchY - touchOffset;
+      clampPaddle(humanPaddle);
       evt.preventDefault();
-    });
-    canvas.addEventListener('touchend', function() {
+    };
+    canvas.ontouchend = function() {
       touchOffset = null;
-    });
-    // Tap to move
-    canvas.addEventListener('touchstart', function(evt) {
-      let rect = canvas.getBoundingClientRect();
-      let tapY = evt.touches[0].clientY - rect.top;
-      player.y = tapY - player.height/2;
-      clampPaddle(player);
-      evt.preventDefault();
-    });
+    };
   }
 }
 
-// -- Main Loop
+// Main Loop
 function game() {
-  movePlayer();
+  moveHumanPaddle();
   moveComputer();
   updateBall();
   render();
   if(!gameOver) requestId = requestAnimationFrame(game);
 }
 
-// -- Menu Logic & Game Start
+// Menu Logic & Game Start
 form.onsubmit = function(e) {
   e.preventDefault();
   playerSide = document.getElementById('side').value;
@@ -251,14 +266,15 @@ form.onsubmit = function(e) {
   computer.score = 0;
   resetBall();
   enablePaddleControls();
+  render();
   game();
 };
 
-// -- Restart Logic
+// Restart Logic
 restartBtn.onclick = function() {
   menu.style.display = "flex";
   winnerScreen.style.display = "none";
   canvas.style.display = "none";
 };
 
-// -- On page load, show menu (done by default)
+// On page load, show menu (done by default)
